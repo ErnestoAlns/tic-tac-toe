@@ -1,0 +1,206 @@
+//mi codigo mejorado por gemini
+
+use std::io;
+use colored::*;
+use std::error::Error;
+
+// 1. Mejora en Cell: Añadimos PartialEq para comparación y Eq para conveniencia.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Cell {
+    Empty,
+    PlayerX,
+    PlayerO,
+}
+
+#[derive(Clone, Copy)]
+enum Turn{
+    X,
+    O
+}
+
+impl Turn {
+    fn next_turn(&self) -> Self{
+        match self {
+            Turn::X => Turn::O,
+            Turn::O => Turn::X,
+        }
+    }
+}
+
+struct GameBoard {
+    board: [[ Cell; 3]; 3]
+}
+
+impl GameBoard {
+    fn prime_board() -> Self {
+        GameBoard {
+            board: [[Cell::Empty; 3]; 3],
+        }
+    }
+
+    /// 🏆 Verifica si hay un ganador en el tablero (8 formas).
+    fn win_cheker(&self) -> Cell {
+        let b = self.board;
+        
+        // Chequeo de Filas y Columnas
+        for i in 0..3 {
+            // Filas: [i][0] == [i][1] == [i][2]
+            if b[i][0] != Cell::Empty && b[i][0] == b[i][1] && b[i][1] == b[i][2] {
+                return b[i][0];
+            }
+
+            // Columnas: [0][i] == [1][i] == [2][i]
+            if b[0][i] != Cell::Empty && b[0][i] == b[1][i] && b[1][i] == b[2][i] {
+                return b[0][i];
+            }
+        }
+
+        // Diagonal Principal: [0][0], [1][1], [2][2]
+        if b[0][0] != Cell::Empty && b[0][0] == b[1][1] && b[1][1] == b[2][2] {
+            return b[0][0];
+        }
+
+        // Diagonal Secundaria: [0][2], [1][1], [2][0]
+        if b[0][2] != Cell::Empty && b[0][2] == b[1][1] && b[1][1] == b[2][0] {
+            return b[0][2];
+        }
+
+        Cell::Empty
+    }
+
+    /// Muestra el estado del tablero con IDs numerados para la entrada.
+    fn show_board(&self) {
+        for i in 0..3 {
+            for j in 0..3 {
+                let current_pos = (i * 3 + j + 1 ).to_string();
+                
+                // 🔑 Mejora Lógica: Usar "O" para PlayerO
+                let item_show = match self.board[i][j] {
+                    Cell::Empty => &current_pos,
+                    Cell::PlayerX => "X",
+                    Cell::PlayerO => "O", // Corregido de "Y" a "O"
+                };
+
+                match self.board[i][j] {
+                    Cell::Empty => print!(" {} ", item_show),
+                    Cell::PlayerX => print!(" {} ", item_show.red()),
+                    Cell::PlayerO => print!(" {} ", item_show.blue()),
+                }
+
+                if j < self.board[0].len() -1 {
+                    print!("{}", "|".green());
+                }
+            }
+            println!();
+            if i < self.board.len()-1 {
+                println!("{}", "---+---+---".green());
+            }
+        }
+    }
+
+    /// 🛡️ Intenta realizar una jugada. Devuelve 'true' si fue válida (casilla vacía).
+    fn play(&mut self, pos: usize, player: Cell) -> bool {
+        let i = pos / 3;
+        let j = pos % 3;
+
+        // 🛡️ Validación de rango. Si 'pos' es >= 9, 'i' o 'j' fallarán.
+        if i >= 3 || j >= 3 { 
+            return false; 
+        }
+
+        // 🔑 Lógica Idiomática: Retorno implícito de bool
+        if self.board[i][j] == Cell::Empty {
+            self.board[i][j] = player;
+            true // Retorna 'true' (Jugada Válida)
+        } else { 
+            false // Retorna 'false' (Casilla Ocupada)
+        }
+    }
+}
+
+// Lógica de I/O
+fn option() -> Result<usize, Box<dyn Error>> {
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let input:usize = input.trim().parse()?;
+    
+    // 🔑 Mantenemos el ajuste: El usuario ingresa 1-9, el código usa 0-8.
+    Ok(input - 1) 
+}
+
+fn start_game() {
+    let decoration = format!("{}","===".repeat(6).green());
+    let title = format!("{}","TIC TAC TOE".green());
+    println!("{} {} {}", decoration, title, decoration);
+    println!("- {}    - {}", "Player X".red(), "Player O".blue());
+    println!("\n");
+}
+fn end_game(resultado: &str) {
+    let decoration = format!("{}","===".repeat(16).green());
+    println!("\n");
+    println!("{}", decoration);
+    println!("--- {} ---", resultado);
+    println!("{}", decoration);
+}
+
+// --- Función Principal con Lógica de Control ---
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut game_board = GameBoard::prime_board();
+    start_game();
+    game_board.show_board();
+    println!("\n");
+
+    let mut current_turn = Turn::X;
+    let mut turnos_validos = 0; // 🔑 Contador de turnos válidos para el empate
+    let mut game_over = false; // Bandera para controlar el estado final
+
+    // 🔑 Bucle Principal (While) que se ejecuta hasta que haya ganador o empate (turnos_validos == 9)
+    while turnos_validos < 9 && !game_over {
+        // 🔑 Optimización Idiomática: Elimina la variable 'next' innecesaria
+        let (turn_name, player_cell, color_name) = match current_turn{
+            Turn::X => ("Payer X", Cell::PlayerX, "X".red()),
+            Turn::O => ("Payer O", Cell::PlayerO, "O".blue()),
+        };
+
+        // Imprimir prompt
+        println!("{} ({}) turno: ", turn_name, color_name);
+
+        let play = option()?; // Obtener input (puede propagar I/O o Parse error)
+
+        // 🔑 Intentar la jugada
+        if game_board.play(play, player_cell){
+            
+            // --- Jugada Válida ---
+            turnos_validos += 1; // Aumentamos SOLO si fue una jugada válida
+            println!("\n");
+            game_board.show_board();
+            println!("\n");
+
+            // Comprobar Ganador
+            if game_board.win_cheker() != Cell::Empty {
+                println!("🎉 ¡Felicidades! ¡El Jugador {} ha ganado! 🎉", color_name);
+                game_over = true;
+                break; // Salir del bucle
+
+            }
+
+            // Preparar el siguiente turno
+            current_turn = current_turn.next_turn();
+        
+        } else {
+            // --- Jugada Inválida (Casilla Ocupada o Rango Inválido) ---
+            println!("{}\n", "!!!Error!!! Casilla ocupada o número fuera de rango (1-9). Intente de nuevo.".yellow());
+            // El turno no cambia, el loop se repite para el mismo jugador.
+        }
+    }
+
+    // 🔑 Lógica de Empate: Solo si el juego terminó por turnos Y no hubo ganador.
+    if turnos_validos == 9 && !game_over {
+        end_game("¡JUEGO TERMINADO! ES UN EMPATE 🤝");
+    } else if game_over {
+        // Lógica de victoria (ya manejada por el break en el bucle)
+        end_game("¡JUEGO TERMINADO! HAY UN GANADOR 🎉");
+    }
+    
+    Ok(())
+}
