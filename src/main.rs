@@ -1,3 +1,5 @@
+mod rss;
+use rss::{logic, core};
 use std::io;
 use colored::*;
 use std::error::Error;
@@ -101,7 +103,7 @@ impl GameBoard {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut game_board = GameBoard::prime_board();
-    start_game();
+    logic::start_game();
     game_board.show_board();
     println!("\n");
 
@@ -136,7 +138,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 
     }
-    end_game();
+    logic::end_game();
     Ok(())
 }
 
@@ -165,15 +167,3 @@ fn option() -> Result<usize, Box<dyn Error>> {
 
 
 
-fn start_game() {
-    let decoration = format!("{}","===".repeat(6).green());
-    let title = format!("{}","TIC TAC TOE".green());
-    println!("{} {} {}", decoration, title, decoration);
-    println!("- {}    - {}", "Player X".red(), "Player O".blue());
-    println!("\n");
-}
-fn end_game() {
-    let decoration = format!("{}","===".repeat(16).green());
-    println!("\n");
-    println!("{}", decoration);
-}
